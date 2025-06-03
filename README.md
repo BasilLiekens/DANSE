@@ -1,5 +1,5 @@
 # DANSE
-This repository contains code for performing wideband simulations of the Distributed Adaptive Node-specific Signal Estimation (DANSE) algorithm [^1], [^2], [^3]. This code handles both the algorithm itself and has a set of visualization tools to help in interpreting the results.
+This repository contains code for performing wideband simulations of the Distributed Adaptive Node-specific Signal Estimation (DANSE) algorithm[^1],[^2],[^3]. This code handles both the algorithm itself and has a set of visualization tools to help in interpreting the results.
 
 ## Setup
 Create a virtual environment: `python -m venv .venv` and install the packages listed in [requirements.txt](code/requirements.txt): `pip install -r requirements.txt`.
@@ -18,8 +18,8 @@ Furthermore, parameter sweeps with [main_sweep.py](code/main_sweep.py) and [visu
 
 ## References
 
-[^1] A. Bertrand and M. Moonen, “Distributed adaptive node-specific signal estimation in fully connected sensor networks – Part I: Sequential node updating,”IEEE Transactions on Signal Processing, vol. 58, no. 10, pp. 5277–5291, 2010.
+[^1]: A. Bertrand and M. Moonen, “Distributed adaptive node-specific signal estimation in fully connected sensor networks – Part I: Sequential node updating,”IEEE Transactions on Signal Processing, vol. 58, no. 10, pp. 5277–5291, 2010.
 
-[^2] A. Bertrand and M. Moonen, "Distributed Adaptive Node-Specific Signal Estimation in Fully Connected Sensor Networks—Part II: Simultaneous and Asynchronous Node Updating," in IEEE Transactions on Signal Processing, vol. 58, no. 10, pp. 5292-5306, Oct. 2010.
+[^2]: A. Bertrand and M. Moonen, "Distributed Adaptive Node-Specific Signal Estimation in Fully Connected Sensor Networks—Part II: Simultaneous and Asynchronous Node Updating," in IEEE Transactions on Signal Processing, vol. 58, no. 10, pp. 5292-5306, Oct. 2010.
 
-[^3] A. Hassani, A. Bertrand and M. Moonen, "GEVD-Based Low-Rank Approximation for Distributed Adaptive Node-Specific Signal Estimation in Wireless Sensor Networks," in IEEE Transactions on Signal Processing, vol. 64, no. 10, pp. 2557-2572, May 2016.
+[^3]: A. Hassani, A. Bertrand and M. Moonen, "GEVD-Based Low-Rank Approximation for Distributed Adaptive Node-Specific Signal Estimation in Wireless Sensor Networks," in IEEE Transactions on Signal Processing, vol. 64, no. 10, pp. 2557-2572, May 2016.
