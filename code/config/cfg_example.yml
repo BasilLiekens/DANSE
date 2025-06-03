@@ -1,0 +1,68 @@
+# Example of a config file, make your own to avoid having to push this all the time
+
+rd:  # room dimensions (m) (can be 2-D or 3-D)
+- 5.0
+- 4.5
+temperature: 20.0  # temperature (°C)
+humidity: 50.0  # relative humidity (%)
+t60: 0.0  # reverberation time (s)
+#
+fs: 16000
+RIR_length: 16000
+#
+SRO:  # sampling rate offset [ppm], of length 1 or length == K
+  - 0  
+#
+audio_base: "/path/to/audio-files/"
+noise_base: "/path/to/noise-files/"
+#
+K: 3  # number of nodes
+Mk: 4  # number of microphones per node (all nodes have the same Mk)
+R: 1   # number of channels to communicate
+node_diameter: 0.2  # node diameter (m) (where the microphones are placed around the node's center) (all nodes have the same diameter)
+min_inter_sensor_d: 0.05  # minimal inter-sensor distance within a node (m)
+#
+Ns: 1  # number of desired sources
+Nn: 1  # number of noise sources
+min_d_sources: 0.5  # minimum distance between sources (m)
+min_d_sources_wall: 0.5  # minimum distance between each source and walls (m)
+min_d_nodes_wall: 0.5  # minimum distance between each node and walls (m)
+#
+lFFT: 1024
+window: "sqrt hanning"
+overlap: 0.5
+#
+alphaFormat: "harmonic"
+alpha0: 1
+#
+deltaUpdate: 100  # number of samples before an update can happen
+lmbd: 0.99  # smoothing factor for the autocorrelation matrices
+#
+useVAD: True
+vadType: "silero"
+#
+GEVD: False  # whether or not to use a GEVD-based updating rule
+sequential: True  # whether or not to do sequential updating
+updateMode: "exponential" # the way in which to update the correlation matrices in online fashion
+Gamma: 0 # regularization constant for the computation of the regular Wiener solution
+mu: 1 # mu constant for the speech-distortion weighting of the regular MWF
+#
+signal_length: 40          # (s)
+recorded_signals:   True   # Whether or not to use white noise or actual audio signals. 
+recorded_noise:     True
+#
+SIR: 0  # Signal-to-Interference Ratio (measured w.r.t. the first node in the network)
+measurement_noise:  True
+measurement_SNR:    10      # The measurement noise w.r.t. inpinging signal + noise power (dB)
+#
+include_silences:   False # Whether or not to force the source signal to 0 at times (for the VAD) 
+silence_period: 10000     # the number of samples that amount to one period (active and inactive)
+silence_duty_cycle: 0.8   # the amount of time the source is active in that period (fraction)
+#
+seed: 42
+# 
+audio_sources: # list of files to use from the `audio_base` folder, should be of length `Ns`
+  - ["p262.wav"]	
+noise_sources: 
+  - ["Babble_noise1.wav"] # list of files to use from the `noise_base` folder, length == `Nn`
+#

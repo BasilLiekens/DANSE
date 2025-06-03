@@ -1,0 +1,7 @@
+# avoid pycache
+__pycache__
+
+# avoid pushing config files all the time
+cfg.yml
+sweep_variables.py
+visualization_variables.py
