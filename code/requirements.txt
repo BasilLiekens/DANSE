@@ -9,3 +9,4 @@ resampy
 scipy
 silero-vad
 soundfile
+tqdm
