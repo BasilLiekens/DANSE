@@ -1,0 +1,80 @@
+# Basic config for the generation of the signals
+signalLength: 40  # length of the recording [s]
+speakerFs: 48000  # sampling frequency of the speakers
+micFs: 16000  # sampling frequency of the mics
+#
+audioBase: "/path/to/audio/files"
+speechPrefix: "/suffix/after/audioBase/to/desired/signals"
+interfererPrefix: "suffix/after/audioBase/to/interfering/signals"
+#
+desiredSpeakers: 
+  - list 
+  - of
+  - desired signals
+interferingSpeakers: 
+  - list
+  - of 
+  - interfering signals
+#
+templateLength: 1024  # length of the template [samples]
+templateType: "MLS"
+nFreqs: 10      # number of frequencies if a sum of sinusoids is used
+blockSize: 512  # number of samples recorded at once by sounddevice
+#
+
+# Specific config for the output
+output_device: "name_of_output_device"  # used as a hint for sounddevice to find the audio device
+#
+sources:
+  - list
+  - of
+  - speakers
+# 
+output_channels:
+  - mappings 
+  - of
+  - desired 
+  - channels
+  - to 
+  - sounddevice
+#
+
+# mic array config
+speakerID: "partial_name_of_speaker"  # used as a hint for sounddevice to find the audio device
+nChannels: 4  # number of channels to use for recordings
+desChannels:  # list of desired signals from the speaker
+  - 1
+  - 2
+  - 3
+  - 4
+
+# how to save the received files?
+baseDir: "/path/to/save/folder"
+fileName: "recording_dry" # change to "recording_wet" when running DANSE
+fileType: ".wav"
+
+# parameters for the frequency domain processing
+lFFT: 1024
+overlap: 0.5
+#
+R: 1
+#
+windowType: "sqrt hanning"
+vadType: "silero"
+#
+deltaUpdate: 100
+lmbd: 0.99
+# 
+GEVD: False
+Gamma: 0
+mu: 1
+#
+sequential: True
+alpha0: 1
+alphaFormat: "harmonic"
+#
+path_to_calibration: "/home/RPi/installations/recording_dry.wav"  # where to find calibration
+baseDir_pi: "/home/RPi/installations" # where does the RPi look for stuff like the weights?
+# 
+seed: 64
+#

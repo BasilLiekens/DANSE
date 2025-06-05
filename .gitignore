@@ -1,5 +1,6 @@
-# avoid pycache
+# avoid folders not meant to be pushed
 __pycache__
+output
 
 # avoid pushing config files all the time
 cfg.yml

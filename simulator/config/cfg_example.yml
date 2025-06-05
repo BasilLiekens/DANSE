@@ -11,10 +11,11 @@ fs: 16000
 RIR_length: 16000
 #
 SRO:  # sampling rate offset [ppm], of length 1 or length == K
-  - 0  
+- 0  
 #
-audio_base: "/path/to/audio-files/"
-noise_base: "/path/to/noise-files/"
+audio_base: "/path/to/files/for/audio"
+noise_base: "/path/to/files/for/interference"
+recordings_base: "/path/to/recordings"
 #
 K: 3  # number of nodes
 Mk: 4  # number of microphones per node (all nodes have the same Mk)
@@ -62,7 +63,14 @@ silence_duty_cycle: 0.8   # the amount of time the source is active in that peri
 seed: 42
 # 
 audio_sources: # list of files to use from the `audio_base` folder, should be of length `Ns`
-  - ["p262.wav"]	
-noise_sources: 
-  - ["Babble_noise1.wav"] # list of files to use from the `noise_base` folder, length == `Nn`
+- list
+- of
+- audio files
+
+noise_sources: # list of files to use from the `noise_base` folder, length == `Nn`
+- list
+- of
+- noise files
+
+recording_session: "session_folder_name"
 #

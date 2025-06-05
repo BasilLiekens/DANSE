@@ -249,6 +249,6 @@ if __name__ == "__main__":
     mpl.use("TkAgg")  # use TkAgg backend to avoid issues when plotting
     plt.ion()  # interactive mode on
 
-    PATH_TO_CFG = "config/cfg.yml"  # path to configuration file (YAML)
+    PATH_TO_CFG = "config/cfg_example.yml"  # path to configuration file (YAML)
 
     sys.exit(main())
