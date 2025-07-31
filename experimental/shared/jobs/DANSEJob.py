@@ -105,10 +105,10 @@ class DANSEJob(PythonJob):
             case "sqrt hanning":
                 window: np.ndarray = np.sqrt(np.hanning(self.lFFT))
             case "ones":
-                window: np.ndarray = np.sqrt(self.overlap) * np.ones(self.lFFT)
+                window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
             case _:
                 warnings.warn("Window type not recognized, using scaled ones instead.")
-                window: np.ndarray = 1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
+                window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
 
         self.hop = int((1 - self.overlap) * self.lFFT)
         STFTObj: signal.ShortTimeFFT = signal.ShortTimeFFT(

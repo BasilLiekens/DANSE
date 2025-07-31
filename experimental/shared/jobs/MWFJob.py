@@ -92,14 +92,10 @@ class MWFJob(PythonJob):
             case "sqrt hanning":
                 self.window: np.ndarray = np.sqrt(np.hanning(self.lFFT))
             case "ones":
-                self.window: np.ndarray = (
-                    1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
-                )
+                self.window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
             case _:
                 warnings.warn("Window type not recognized, using scaled ones instead.")
-                self.window: np.ndarray = (
-                    1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
-                )
+                self.window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
 
         self.hop = int((1 - self.overlap) * self.lFFT)
         self.STFTObj: signal.ShortTimeFFT = signal.ShortTimeFFT(
