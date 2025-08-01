@@ -5,7 +5,7 @@
 # This script has been created by Paul Didier, SOUNDS ETN, KU Leuven ESAT STADIUS
 # alongside the "asc.py" and "setup.py" files as a starting point for simulations
 # for the thesis "Distributed signal estimation in a real-world wireless sensor
-# network".
+# network". Later it was adapted by Basil Liekens to enhance the functionality.
 #
 # (c) Basil Liekens & Paul Didier
 
@@ -13,7 +13,6 @@ import DANSE_base
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from pyinstrument import Profiler
 import scipy.signal as signal
 import signal_generation as siggen
 import sys
@@ -22,6 +21,17 @@ import warnings
 
 
 def main():
+    ## config
+    # general
+    nIter = int(5e1)
+    nodeToTrack = 0
+    nodesToTrack = [nodeToTrack]  # only one node is taken into account!
+    sequential = [True, False]
+    gevd = [False, True]
+
+    # algorithms to use more in-depth: storing results & more advanced plots.
+    desiredAlgos = [r"$DANSE_1$", r"$GEVD-DANSE_1$"]
+
     ## setup
     p = siggen.Parameters().load_from_yaml(PATH_TO_CFG)
 
@@ -33,31 +43,34 @@ def main():
         case "sqrt hanning":
             window = np.sqrt(np.hanning(p.lFFT))
         case "ones":
-            window = 1 / np.sqrt(1 / (1 - p.overlap)) * np.ones(p.lFFT)
+            window = np.sqrt(1 - p.overlap) * np.ones(p.lFFT)
         case _:
             warnings.warn("Window type not recognized, using scaled ones instead.")
-            window: np.ndarray = 1 / np.sqrt(1 / p.overlap) * np.ones(p.lFFT)
+            window: np.ndarray = np.sqrt(1 - p.overlap) * np.ones(p.lFFT)
 
     STFTObj = signal.ShortTimeFFT(
         window, int((1 - p.overlap) * p.lFFT), p.fs, fft_mode="onesided"
     )
 
-    e1 = np.vstack((np.eye(p.R), np.zeros((p.K * p.Mk - p.R, p.R))))
+    e1 = np.vstack(
+        (
+            np.zeros((p.Mk * nodeToTrack, p.R)),
+            np.eye(p.R),
+            np.zeros(((p.K - nodeToTrack) * p.Mk - p.R, p.R)),
+        )
+    )
     vad = (
         utils.vad.computeVAD(
-            np.sum(audio, axis=2)[0, :],
-            fs=p.fs,
-            type=p.vadType,
+            np.sum(audio, axis=2)[nodeToTrack * p.Mk, :],
+            p.fs,
+            p.vadType,
         )
         if p.useVAD
         else None
     )
 
     ## start simulations
-    profiler = Profiler()
-    profiler.start()
-
-    ## compute centralized MWF
+    # compute centralized MWF
     W_MWF_fd, signal_fd, interference_fd = DANSE_base.MWF.MWF_fd(
         fullAudio, fullNoise, e1, STFTObj, GEVD=False, Gamma=p.Gamma, mu=p.mu, vad=vad
     )
@@ -66,214 +79,148 @@ def main():
     )
 
     ## perform DANSE iterations
-    nIter = int(2.5e2)
-    network = DANSE_base.batch_network(
-        p.K,
-        p.Mk,
-        p.R,
-        p.lFFT,
-        p.overlap,
-        p.window,
-        p.alphaFormat,
-        p.alpha0,
-        False,  # GEVD
-        True,  # sequential
-        p.Gamma,
-        p.mu,
-        p.useVAD,
-        p.vadType,
-        p.fs,
-        p.seed,
-    )
-    Ws, audioOut, noiseOut = network.performDANSE(fullAudio, fullNoise, nIter)
+    # storage for results
+    Ws_DANSE: dict[str, list[np.ndarray]] = dict()
+    audioOut: dict[str, list[np.ndarray]] = dict()
+    noiseOut: dict[str, list[np.ndarray]] = dict()
 
-    network = DANSE_base.batch_network(
-        p.K,
-        p.Mk,
-        p.R,
-        p.lFFT,
-        p.overlap,
-        p.window,
-        p.alphaFormat,
-        p.alpha0,
-        True,  # GEVD
-        True,  # sequential
-        p.Gamma,
-        p.mu,
-        p.useVAD,
-        p.vadType,
-        p.fs,
-        p.seed,
-    )
-    Ws_gevd, audioOut_gevd, noiseOut_gevd = network.performDANSE(
-        fullAudio, fullNoise, nIter
-    )
+    for seqMode in sequential:
+        for gevdMode in gevd:
+            algo = f"${'' if seqMode else 'rS-'}{'GEVD-' if gevdMode else ''}DANSE_1$"
 
-    network = DANSE_base.batch_network(
-        p.K,
-        p.Mk,
-        p.R,
-        p.lFFT,
-        p.overlap,
-        p.window,
-        p.alphaFormat,
-        p.alpha0,
-        False,  # GEVD
-        False,  # sequential
-        p.Gamma,
-        p.mu,
-        p.useVAD,
-        p.vadType,
-        p.fs,
-        p.seed,
-    )
-    Ws_sync, _, _ = network.performDANSE(fullAudio, fullNoise, nIter)
+            network = DANSE_base.batch_network(
+                p.K,
+                p.Mk,
+                p.R,
+                p.lFFT,
+                p.overlap,
+                p.window,
+                p.alphaFormat,
+                p.alpha0,
+                gevdMode,
+                seqMode,
+                p.Gamma,
+                p.mu,
+                p.useVAD,
+                p.vadType,
+                p.fs,
+                p.seed,
+                nodesToTrack,
+            )
 
-    network = DANSE_base.batch_network(
-        p.K,
-        p.Mk,
-        p.R,
-        p.lFFT,
-        p.overlap,
-        p.window,
-        p.alphaFormat,
-        p.alpha0,
-        True,  # GEVD
-        False,  # sequential
-        p.Gamma,
-        p.mu,
-        p.useVAD,
-        p.vadType,
-        p.fs,
-        p.seed,
-    )
-    Ws_gevd_sync, _, _ = network.performDANSE(fullAudio, fullNoise, nIter)
+            Ws, audio_DANSE, noise_DANSE = network.performDANSE(
+                fullAudio, fullNoise, nIter
+            )
 
-    ## stop profiler after the algorithms themselves
-    profiler.stop()
-    print(profiler.output_text(unicode=True, color=True))
+            # Remove the encapsulating list, only 1 output.
+            Ws_DANSE[algo] = Ws[0]
+            audioOut[algo] = audio_DANSE[0]
+            noiseOut[algo] = noise_DANSE[0]
 
     ## compute metrics
-    SINRinit = utils.metrics.SINR((audio + noise)[0, :], audio[0, :], noise[0, :])
-
+    SINRinit = utils.metrics.SINR(
+        (fullAudio + fullNoise)[0, :], fullAudio[0, :], fullNoise[0, :]
+    )
     SINRafter_fd = utils.metrics.SINR(
-        signal_fd + interference_fd, signal_fd, interference_fd
+        (signal_fd + interference_fd)[0, :], signal_fd[0, :], interference_fd[0, :]
     )
     SINRafter_GEVD = utils.metrics.SINR(audio_gevd + noise_gevd, audio_gevd, noise_gevd)
-    SINRafter_DANSE = utils.metrics.SINR(
-        audioOut[0][0, :] + noiseOut[0][0, :], audioOut[0][0, :], noiseOut[0][0, :]
+    SINRafter_DANSE: dict[str, float] = dict()
+
+    STOIinit = utils.metrics.computeSTOI(
+        fullAudio[[0], :], (fullAudio + fullNoise)[[0], :], p.fs
     )
-    SINRafter_GEVD_DANSE = utils.metrics.SINR(
-        audioOut_gevd[0][0, :] + noiseOut_gevd[0][0, :],
-        audioOut_gevd[0][0, :],
-        noiseOut_gevd[0][0, :],
+    STOIafter_fd = utils.metrics.computeSTOI(
+        fullAudio[[0], :], (signal_fd + interference_fd)[[0], :], p.fs
     )
+    STOIafter_gevd = utils.metrics.computeSTOI(
+        fullAudio[[0], :], (audio_gevd + noise_gevd)[[0], :], p.fs
+    )
+    STOIafter_DANSE: dict[str, float] = dict()
+
+    sortedAlgos = sorted(list(Ws_DANSE.keys()), key=lambda x: len(x))
+    for algo in sortedAlgos:
+        d = audioOut[algo]
+        n = noiseOut[algo]
+        SINRafter_DANSE[algo] = utils.metrics.SINR((d + n)[0, :], d[0, :], n[0, :])
+        STOIafter_DANSE[algo] = utils.metrics.computeSTOI(
+            fullAudio[[0], :], (d + n)[[0], :], p.fs
+        )
 
     print(
-        f"SINR before beamforming: {SINRinit} dB, SINR after beamforming: "
-        f"{SINRafter_fd} dB for centralized filter in frequency domain, "
-        f"{SINRafter_GEVD} dB for GEVD based centralized filter."
+        f"Initial SINR:\t\t\t{SINRinit} dB\nAfter Centralized MWF:\t\t"
+        f"{SINRafter_fd} dB\nAfter Centralized GEVD MWF:\t{SINRafter_GEVD} dB"
     )
+    for algo in sortedAlgos:
+        nSpaces = len(sortedAlgos[-1]) - len(algo)  # list is sorted on length!
+        print(f"SINR after {algo[1:-1]}:{nSpaces*' '}\t{SINRafter_DANSE[algo]} dB")
+
     print(
-        f"SINR after DANSE beamforming (in frequency domain): {SINRafter_DANSE}, "
-        f"{SINRafter_GEVD_DANSE} dB for GEVD-based DANSE."
+        f"\nInitial STOI:\t\t\t{STOIinit}\nAfter Centralized MWF:\t\t{STOIafter_fd}"
+        f"\nAfter Centralized GEVD MWF:\t{STOIafter_gevd}"
+    )
+    for algo in sortedAlgos:
+        nSpaces = len(sortedAlgos[-1]) - len(algo)  # list is sorted on length!
+        print(f"STOI after {algo[1:-1]}:{nSpaces*' '}\t{STOIafter_DANSE[algo]}")
+
+    ## store results
+    utils.playback.writeSoundFile((fullAudio + fullNoise)[0, :], p.fs, "received")
+
+    utils.playback.writeSoundFile(
+        (signal_fd + interference_fd)[0, :], p.fs, "after_centralized"
+    )
+    utils.playback.writeSoundFile(
+        (audio_gevd + noise_gevd)[0, :], p.fs, "after_centralized_gevd"
     )
 
-    ## write back results
-    utils.playback.writeSoundFile(
-        np.sum(audio, axis=2)[0, :] + np.sum(noise, axis=2)[0, :], p.fs, "received_data"
-    )
-    utils.playback.writeSoundFile(
-        signal_fd + interference_fd, p.fs, "after_freq_beamforming_centralized"
-    )
-    utils.playback.writeSoundFile(
-        audio_gevd + noise_gevd, p.fs, "after_GEVD_beamforming_centralized"
-    )
-    utils.playback.writeSoundFile(
-        (audioOut[0] + noiseOut[0])[0, :], p.fs, "after_DANSE"
-    )
-    utils.playback.writeSoundFile(
-        (audioOut_gevd[0] + noiseOut_gevd[0])[0, :], p.fs, "after_GEVD_DANSE"
-    )
+    for algo in desiredAlgos:
+        if algo in sortedAlgos:
+            utils.playback.writeSoundFile(
+                (audioOut[algo] + noiseOut[algo])[0, :], p.fs, f"after_{algo[1:-1]}"
+            )
 
     ## plot some results
-    fig1 = utils.plotting.MSEwPlotter(W_MWF_fd, Ws[0], label=r"$DANSE_1$", marker="o")
-    fig1 = utils.plotting.MSEwPlotter(
-        W_MWF_fd, Ws_sync[0], label=r"$rS-DANSE_1$", marker="x", fig=fig1
-    )
-    fig1 = utils.plotting.MSEwPlotter(
-        W_MWF_gevd, Ws_gevd[0], label=r"$GEVD-DANSE_1$", marker="+", fig=fig1
-    )
-    fig1 = utils.plotting.MSEwPlotter(
-        W_MWF_gevd, Ws_gevd_sync[0], label=r"$rS-GEVD-DANSE_1$", marker="v", fig=fig1
-    )
-
+    colors, markers = utils.plotting.getParameters()
     desired = np.sum(audio, axis=2)[[0], :]
     full = np.sum(audio, axis=2) + np.sum(noise, axis=2)
     Ws_centralized = {"Centralized": W_MWF_fd, "Centralized GEVD": W_MWF_gevd}
-    Ws_DANSE = {
-        r"$DANSE_1$": Ws[0],
-        r"$rS-DANSE_1$": Ws_sync[0],
-        r"$GEVD-DANSE_1$": Ws_gevd[0],
-        r"$rS-GEVD-DANSE_1$": Ws_gevd_sync[0],
-    }
-    colors = {
-        r"$DANSE_1$": "tab:blue",
-        r"$rS-DANSE_1$": "tab:orange",
-        r"$GEVD-DANSE_1$": "tab:green",
-        r"$rS-GEVD-DANSE_1$": "tab:red",
-    }
-    markers = {
-        r"$DANSE_1$": "o",
-        r"$rS-DANSE_1$": "x",
-        r"$GEVD-DANSE_1$": "+",
-        r"$rS-GEVD-DANSE_1$": "v",
-    }
+
+    fig1 = None
+    for algo, weights in Ws_DANSE.items():
+        fig1 = utils.plotting.MSEwPlotter(
+            W_MWF_gevd if "GEVD-" in algo else W_MWF_fd,
+            weights,
+            label=algo,
+            marker=markers[algo],
+            color=colors[algo],
+            fig=fig1,
+        )
 
     _ = utils.plotting.LScostPlotter(
         Ws_centralized, Ws_DANSE, desired, full, STFTObj, colors, markers
     )
 
+    _ = utils.plotting.STFTPlotter(
+        STFTObj.stft((fullAudio + fullNoise)[nodeToTrack * p.Mk, :]), "Received signal"
+    )
+    _ = utils.plotting.STFTPlotter(
+        STFTObj.stft((signal_fd + interference_fd)[0, :]),
+        "After centralized filtering",
+    )
+
+    for algo in desiredAlgos:
+        if algo in sortedAlgos:
+            _ = utils.plotting.STFTPlotter(
+                STFTObj.stft((audioOut[algo] + noiseOut[algo])[0, :]), f"After {algo}"
+            )
+
     plotter = utils.plotting.spatialResponse(room, p, STFTObj, granularity=0.1)
     _ = plotter.plotFilterResponse(W_MWF_fd, filterType="Centralized")
     _ = plotter.plotFilterResponse(W_MWF_gevd, filterType="Centralized GEVD")
-    _ = plotter.plotFilterResponse(Ws[0][-1], filterType="DANSE")
-    _ = plotter.plotFilterResponse(Ws_gevd[0][-1], filterType="GEVD-DANSE")
 
-    room.plot()
-
-    fig3 = utils.plotting.micPlotter(
-        np.sum(audio, axis=2)[0, :], np.sum(noise, axis=2)[0, :], title="Input signals"
-    )
-    fig4 = utils.plotting.micPlotter(
-        audioOut[0][0, :], noiseOut[0][0, :], title="After DANSE"
-    )
-    fig5 = utils.plotting.micPlotter(
-        audioOut_gevd[0][0, :], noiseOut_gevd[0][0, :], title="After GEVD-DANSE"
-    )
-
-    # get all figures to the same y-axes
-    vmin = np.min(
-        (
-            np.min(np.sum(audio, axis=2)[0, :] + np.sum(noise, axis=2)[0, :]),
-            np.min(audioOut[0][0, :] + noiseOut[0][0, :]),
-            np.min(audioOut_gevd[0][0, :] + noiseOut_gevd[0][0, :]),
-        )
-    )
-    vmax = np.max(
-        (
-            np.max(np.sum(audio, axis=2)[0, :] + np.sum(noise, axis=2)[0, :]),
-            np.max(audioOut[0][0, :] + noiseOut[0][0, :]),
-            np.max(audioOut_gevd[0][0, :] + noiseOut_gevd[0][0, :]),
-        )
-    )
-
-    ax3 = fig3.gca()
-    ax3.set(ylim=[vmin, vmax])
-    ax4 = fig4.gca()
-    ax4.set(ylim=[vmin, vmax])
-    ax5 = fig5.gca()
-    ax5.set(ylim=[vmin, vmax])
+    for algo in desiredAlgos:
+        if algo in sortedAlgos:
+            _ = plotter.plotFilterResponse(weights[-1], filterType=algo)
 
     plt.show(block=True)
 

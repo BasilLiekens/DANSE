@@ -66,10 +66,10 @@ def getFigureData() -> (
         "STOI": "samples",
     }
     ylabels: dict[str, str] = {
-        "LS_cost": r"$\mathbb{E}\{\|\mathbf{d}[k] - \mathbf{\hat{d}}[k]\|_2^2\}$",
+        "LS_cost": "LS cost",
         "SINR": "SINR [dB]",
-        "MSE_w": r"$\mathbb{E}\{\|\mathbf{W}^{centr} - \mathbf{W}^{NW}\|_2^2\}$",
-        "MSE_d": r"$\mathbb{E}\{\|\mathbf{\hat{d}}[k]^{centr} - \mathbf{\hat{d}}[k]^{DANSE}\|_2^2\}$",
+        "MSE_w": r"$MSE_W$",
+        "MSE_d": r"$MSE_d$",
         "STOI": "STOI",
     }
     ylims: dict[str, list[float]] = {
@@ -203,7 +203,7 @@ def updatePlot(
             timestamps,
             nwData,
             fillstyle="none",
-            # markevery=0.1,    # not really aesthetically pleasing
+            markevery=0.1,
             linewidth=2,
             label=label,
             **linestyle,
@@ -234,8 +234,8 @@ def addNonNetworkData(
 
     ax.axhline(localValue, linestyle="--", color="k")
     ax.axhline(centralValue, linestyle="--", color="k")
-    ax.annotate(f"local: {valLabel}", xy=(0, localValue), fontsize=12)
-    ax.annotate(f"central: {valLabel}", xy=(0, centralValue), fontsize=12)
+    ax.annotate(f"local: {valLabel}", xy=(0, localValue), fontsize=8)
+    ax.annotate(f"central: {valLabel}", xy=(0, centralValue), fontsize=8)
 
     return fig
 
@@ -248,10 +248,9 @@ def finalizePlot(
     """
     ax = fig.gca()
     ax.grid(True, which="both")
-    ax.legend(fontsize=10)
+    ax.legend(fontsize=10, loc="upper right")
     ax.autoscale(tight=True, axis="x")
-    ax.set(xlabel=xlabel, ylabel=ylabel)
+    ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
     ax.set(ylim=ylim)
-    fig.suptitle(title)
     fig.tight_layout()
     return fig

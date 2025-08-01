@@ -26,13 +26,12 @@ def main():
     # around with cfg.yml in other contexts.
     now = datetime.now()
     saveFolder = os.path.join(
-        "simulator",
         "output",
         "sweeps",
         f"{now.year:02d}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}{now.second:02d}",
     )
     if not os.path.isdir(saveFolder):
-        os.mkdir(saveFolder)
+        os.makedirs(saveFolder)
     shutil.copy(PATH_TO_CFG, saveFolder)
 
     p = siggen.Parameters().load_from_yaml(PATH_TO_CFG)
@@ -88,7 +87,9 @@ def main():
 
 
 if __name__ == "__main__":
-    PATH_TO_CFG = "config/cfg.yml"
     mpl.use("TkAgg")  # avoid issues when plotting
     plt.ion()
+
+    PATH_TO_CFG = "config/cfg.yml"
+
     sys.exit(main())

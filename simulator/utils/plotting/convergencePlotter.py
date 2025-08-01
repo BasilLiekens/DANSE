@@ -8,6 +8,7 @@ def MSEwPlotter(
     W_DANSE: list[np.ndarray],
     label: str = "Filter",
     marker: str = "o",
+    color: str = "tab:blue",
     fig: plt.Figure = None,
 ) -> plt.Figure:
     """
@@ -26,6 +27,8 @@ def MSEwPlotter(
         label:      The label to give to the (added) plot.
 
         marker:     The marker for this specific line
+
+        color:      The color of the line
 
         fig:        A matplotlib object should it be desired to augment an
                     existing figure, then the new data is just plotted on top of
@@ -49,6 +52,7 @@ def MSEwPlotter(
         1 + np.arange(len(errors)),
         errors,
         "-" + marker,
+        color=color,
         fillstyle="none",
         linewidth=2,
         markevery=0.1,
@@ -58,8 +62,8 @@ def MSEwPlotter(
     ax.autoscale(tight=True)
     ax.set(
         xlabel="Iteration",
-        ylabel=r"$\mathbb{E}\{\|\mathbf{W}^{centr} - \mathbf{W}^{NW}\|_2^2\}$",
-        title=r"Evolution of $MSE_W$ over iterations",
+        ylabel=r"$\mathrm{MSE_W}$",
+        title=r"Evolution of $\mathrm{MSE_W}$ over iterations",
     )
     ax.legend()
     fig.tight_layout()
@@ -153,13 +157,7 @@ def LScostPlotter(
         ).T
         centralized_out = centralized_out[:, : desired.shape[1]]
         LS_centralized = np.mean((desired - centralized_out) ** 2)
-        ax.hlines(
-            LS_centralized,
-            1,
-            len(W_DANSE[DANSEKeys[0]]),
-            colors="k",
-            linestyles="dashed",
-        )
+        ax.axhline(LS_centralized, color="k", linestyle="--")
         ax.annotate(key, (1, LS_centralized), fontsize=plt.rcParams["font.size"] - 2)
 
     # loop over inputs in the DANSE weights
@@ -212,7 +210,7 @@ def LScostPlotter(
             ).T[:, : desired.shape[1]]
             LS_local = np.mean((local_out - desired) ** 2)
 
-            ax.axhline(LS_local, linestyle="dashed", color="k", linewidth=2)
+            ax.axhline(LS_local, linestyle="dashed", color="k")
             ax.annotate(
                 key, (1, LS_local), size=plt.rcParams["font.size"] - 2, color="k"
             )
@@ -221,7 +219,7 @@ def LScostPlotter(
     ax.legend()
     ax.set(
         xlabel="Iteration",
-        ylabel=r"$\mathbb{E}\{\|\mathbf{d}[k] - \mathbf{\hat{d}}[k]\|_2^2\}$",
+        ylabel="LS cost",
         title="Evolution of LS cost over iterations",
     )
     ax.autoscale(tight=True, axis="x")

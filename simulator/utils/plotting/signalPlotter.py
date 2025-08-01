@@ -62,7 +62,7 @@ def STFTPlotter(
     STFTdB = 20 * np.log10(np.maximum(np.abs(STFT), 1e-10))  # ensure there is a plot
     fig, ax = plt.subplots()
     fig.set_size_inches(8.5, 5.5)
-    cmesh = ax.pcolormesh(STFTdB, cmap="plasma", vmin=-70, vmax=30)
+    cmesh = ax.pcolormesh(STFTdB, cmap="plasma", vmin=-70, vmax=50)
     ax.set_xlabel("frames")
     ax.set_ylabel("frequency bin")
     ax.set_title(title)

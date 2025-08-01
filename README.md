@@ -1,5 +1,5 @@
 # DANSE
-This repository contains two parts: the first one is a wideband simulator for the Distributed Adaptive Node-specific Signal Estimation (DANSE) algorithm[^1],[^2],[^3]. This code handles both the algorithm itself and has a set of visualization tools to help in interpreting the results. This is located in the [simulator](simulator) folder.
+This repository contains two parts: the first one is a wideband simulator for the Distributed Adaptive Node-specific Signal Estimation (DANSE) algorithm[^1],[^2],[^3]. This code handles both the algorithm itself and has a set of visualization tools to help in interpreting the results. This is located in the [simulator](./simulator) folder.
 
 A contribution of this repository is that it also contains code that allows to do validation of the DANSE algorithm in a real-world WASN by making use of the [MARVELO](https://github.com/CN-UPB/MARVELO) framework to orchestrate the network. This code is located in the [experimental](experimental) folder.
 

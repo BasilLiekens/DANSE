@@ -12,9 +12,6 @@ def SINR(
     target source and one interfering source). The script assumes there is
     access to each source's contribution in the processed output.
 
-    Note: This function was adapted from an implementation of P. Didier in the
-    P&D project of 2024.
-
     Parameters
     ----------
     -y : [N x 1] np.ndarray[float] or list of this

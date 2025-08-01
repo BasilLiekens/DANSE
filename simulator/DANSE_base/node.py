@@ -80,10 +80,10 @@ class DANSENode:
         if self.windowType == "sqrt hanning":
             self.window: np.ndarray = np.sqrt(np.hanning(self.lFFT))
         elif self.windowType == "ones":
-            self.window: np.ndarray = 1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
+            self.window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
         else:
             warnings.warn("Window type not recognized, using scaled ones instead.")
-            self.window: np.ndarray = 1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
+            self.window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
 
         # selection matrix to determine the desired signals
         self.E: np.ndarray = np.vstack(
@@ -307,10 +307,7 @@ class DANSENode:
         Only consider two nodes to be equal if they ARE the same object, don't
         just look at their attributes (what python does by default).
         """
-        if not self is other:
-            return False
-        else:
-            return True
+        return self is other
 
 
 @dataclass

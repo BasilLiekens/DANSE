@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import soundfile as sf
 
 
@@ -22,4 +23,4 @@ def writeSoundFile(signal: np.ndarray, fs: int, title: str = "audiofile"):
     tmp = signal.squeeze()
     # normalize data
     tmp = 1 / np.max(np.abs(tmp)) * tmp
-    sf.write("simulator/output/audio/" + title + ".wav", tmp, fs)
+    sf.write(os.path.join(os.getcwd(), "output", "audio", title + ".wav"), tmp, fs)

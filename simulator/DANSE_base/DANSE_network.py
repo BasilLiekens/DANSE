@@ -44,14 +44,10 @@ class DANSE_network:
             case "sqrt hanning":
                 self.window: np.ndarray = np.sqrt(np.hanning(self.lFFT))
             case "ones":
-                self.window: np.ndarray = (
-                    1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
-                )
+                self.window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
             case _:
                 warnings.warn("Window type not recognized, using scaled ones instead.")
-                self.window: np.ndarray = (
-                    1 / np.sqrt(1 / self.overlap) * np.ones(self.lFFT)
-                )
+                self.window: np.ndarray = np.sqrt(1 - self.overlap) * np.ones(self.lFFT)
 
         if not self.alphaFormat in ["harmonic", "ones"]:
             warnings.warn(

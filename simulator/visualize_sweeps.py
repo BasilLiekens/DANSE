@@ -42,6 +42,7 @@ def main():
         "GEVD",
         "Gamma",
         "mu",
+        "SRO",
     ]  # vars that lead to != centr solutions, SRO could be included if desired
 
     ## dataloading
@@ -62,7 +63,9 @@ def main():
 
     # start by building up some stuff
     lengths = [len(variables[key]) for key in keys]
-    idcs = np.argsort(lengths)[::-1][:nNonSingletons]  # flip then select non-singleton
+    idcs = np.argsort(lengths)[::-1][
+        : np.maximum(nNonSingletons, 1)  # avoid issues when 0 nNonSingletons
+    ]  # flip then select non-singleton
 
     nColors = np.maximum(1, len(variables[keys[idcs[0]]]))
     if nColors > maxColors:
@@ -120,6 +123,7 @@ def main():
     ## plotting
     for metric in metrics:
         fig, ax = plt.subplots()
+        fig.set_size_inches(8.5, 5.5)
         # iterate over all rows of the dataframe
         for i in df.index:
             row: pd.DataFrame = df.loc[i]
@@ -412,4 +416,5 @@ def averageData(data: np.ndarray, method: str = "normal") -> np.ndarray:
 if __name__ == "__main__":
     mpl.use("TkAgg")  # avoid issues when plotting
     plt.ion()
+
     sys.exit(main())

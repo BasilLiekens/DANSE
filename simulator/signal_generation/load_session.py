@@ -12,9 +12,11 @@ def load_session(p: Parameters) -> tuple[np.ndarray, np.ndarray]:
     room. It is expected that there are two types of filenames available in the
     targeted folder: `recording_dry_X.wav` and `recording_wet_X.wav`. The former
     should be a recording that only contains the desired signal (+ measurement
-    noise) while the other one contains all sources. The `dry` recordings are
-    also cleaned up by putting the signal to 0 in periods without a signal to
-    not distort the metrics too much.
+    noise) while the other one contains all sources.
+
+    Despite the fact that the dry signals still contain some measurement noise,
+    they are not cleaned: using silero to do this will result in a different vad
+    the second time.
 
     This way of operating is also representative of how the processing would
     happen in practice.
@@ -63,23 +65,29 @@ def load_session(p: Parameters) -> tuple[np.ndarray, np.ndarray]:
             : int(p.signal_length * p.fs), :
         ].T
 
-    # # clean up the dry recording to contain less measurement noise
-    # model = silero.load_silero_vad()
-    # for i in range(dry_signals.shape[0]):
-    #     cleaned = np.zeros((dry_signals.shape[1]))
-    #     speech_timestamps = silero.get_speech_timestamps(
-    #         dry_signals[i, :], model, sampling_rate=p.fs, return_seconds=False
-    #     )
-
-    #     for seg in speech_timestamps:
-    #         cleaned[seg["start"] : seg["end"]] = dry_signals[
-    #             i, seg["start"] : seg["end"]
-    #         ]
-
-    #     dry_signals[i, :] = cleaned
-
-    # scale all signals to bring one to unit power and scale the rest accordingly
-    dry_signals = 1 / np.sqrt(np.mean(wet_signals[0, :] ** 2)) * dry_signals
-    wet_signals = 1 / np.sqrt(np.mean(wet_signals[0, :] ** 2)) * wet_signals
-
     return dry_signals, wet_signals
+
+
+def getStartSample(sig: np.ndarray, fs: int = int(16e3)) -> int:
+    """
+    Given a signal `sig`, snip off the first part of a recording (let the
+    recording start at the first detected speech segment).
+
+    Parameters
+    ----------
+        sig: np.ndarray, 1D
+            The signal to snip off a part
+
+        fs: int
+            The sampling frequence of the signal, should be 16 or 8 kHz to
+            function with `Silero`
+
+    Returns
+    -------
+        The index of the first speech segment as detected by `Silero`
+    """
+    model = silero.load_silero_vad()
+    speech_timestamps = silero.get_speech_timestamps(
+        sig, model, sampling_rate=fs, return_seconds=False
+    )
+    return speech_timestamps[0]["start"]
