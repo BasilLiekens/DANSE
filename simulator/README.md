@@ -39,7 +39,7 @@ Configuration of the three `main_x.py` files happens through a configuration fil
 > For convenience the config files `cfg.yml`, `sweep_variables.py` and `visualization_variables.py` are included in the `.gitignore` to prevent pushing config files which makes the commits more verbose.
 
 > [!CAUTION]
-> Some options are incorporated for experimentation, but might actually harm performance. For example, using the `include_silences` flag does enforce silences in the desired signal such that $\mathbf{R}_\mathbf{nn}$ can be computed without oracle knowledge of the separate contributions. However, doing so can cut off the waveform, leading to the VAD not recognizing it as a speech segment, which leads to the desired signal leaking into $\mathbf{R}_\mathbf{nn}$. This in turn leads to reduced performance as the desired signal will also be supressed. When white noise is used with an energy-based VAD this option might be useful however.
+> Some options are incorporated for experimentation, but might actually harm performance. For example, using the `include_silences` flag does enforce silences in the desired signal such that $R_{nn}$ can be computed without oracle knowledge of the separate contributions. However, doing so can cut off the waveform, leading to the VAD not recognizing it as a speech segment, which leads to the desired signal leaking into $R_{nn}$. This in turn leads to reduced performance as the desired signal will also be supressed. When white noise is used with an energy-based VAD this option might be useful however.
 
 ## Output
 The output can consist of a few things, as mentioned before:
