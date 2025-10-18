@@ -9,15 +9,17 @@
 #
 # (c) Basil Liekens & Paul Didier
 
+
+import sys
+import warnings
+
 import DANSE_base
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 import signal_generation as siggen
-import sys
 import utils
-import warnings
 
 
 def main():
@@ -72,10 +74,26 @@ def main():
     ## start simulations
     # compute centralized MWF
     W_MWF_fd, signal_fd, interference_fd = DANSE_base.MWF.MWF_fd(
-        fullAudio, fullNoise, e1, STFTObj, GEVD=False, Gamma=p.Gamma, mu=p.mu, vad=vad
+        fullAudio,
+        fullNoise,
+        e1,
+        STFTObj,
+        GEVD=False,
+        Gamma=p.Gamma,
+        mu=p.mu,
+        vad=vad,
+        lRIR=p.lRIR,
     )
     W_MWF_gevd, audio_gevd, noise_gevd = DANSE_base.MWF.MWF_fd(
-        fullAudio, fullNoise, e1, STFTObj, GEVD=True, Gamma=p.Gamma, mu=p.mu, vad=vad
+        fullAudio,
+        fullNoise,
+        e1,
+        STFTObj,
+        GEVD=True,
+        Gamma=p.Gamma,
+        mu=p.mu,
+        vad=vad,
+        lRIR=p.lRIR,
     )
 
     ## perform DANSE iterations
@@ -153,7 +171,7 @@ def main():
     )
     for algo in sortedAlgos:
         nSpaces = len(sortedAlgos[-1]) - len(algo)  # list is sorted on length!
-        print(f"SINR after {algo[1:-1]}:{nSpaces*' '}\t{SINRafter_DANSE[algo]} dB")
+        print(f"SINR after {algo[1:-1]}:{nSpaces * ' '}\t{SINRafter_DANSE[algo]} dB")
 
     print(
         f"\nInitial STOI:\t\t\t{STOIinit}\nAfter Centralized MWF:\t\t{STOIafter_fd}"
@@ -161,7 +179,7 @@ def main():
     )
     for algo in sortedAlgos:
         nSpaces = len(sortedAlgos[-1]) - len(algo)  # list is sorted on length!
-        print(f"STOI after {algo[1:-1]}:{nSpaces*' '}\t{STOIafter_DANSE[algo]}")
+        print(f"STOI after {algo[1:-1]}:{nSpaces * ' '}\t{STOIafter_DANSE[algo]}")
 
     ## store results
     utils.playback.writeSoundFile((fullAudio + fullNoise)[0, :], p.fs, "received")

@@ -1,9 +1,10 @@
+import warnings
+
 import numpy as np
 import scipy.linalg as spla
 import scipy.signal as signal
-from tqdm import tqdm
 import utils.vad
-import warnings
+from tqdm import tqdm
 
 
 def MWF_fd(
@@ -15,6 +16,7 @@ def MWF_fd(
     Gamma: float = 0,
     mu: float = 1,
     vad: np.ndarray | None = None,
+    lRIR: int = 1,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Given the audio and noise (=output of "create_micsigs") alongside a
@@ -76,6 +78,12 @@ def MWF_fd(
             information in this case which was possible there). THIS IS A SMALL,
             BUT IMPORTANT, INCONSISTENCY!
 
+        lRIR: int, >= 1, optional
+            Integer larger than or equal to 1, indicating the length of the RIR in
+            the frequency domain. Allows to make use of the "convolutive transfer
+            function" approximation, allowing for more flexibility than purely
+            relying on the "multiplicative" one.
+
     Returns
     ----------
         A tuple consisting of the MWF alongside that filter applied to the
@@ -99,6 +107,8 @@ def MWF_fd(
         raise ValueError(f"Gamma should be non-negative! Got {Gamma}.")
     if mu < 0:
         raise ValueError(f"mu for SDW should be >= 0! Got {mu}.")
+    if lRIR <= 0:
+        raise ValueError(f"The length of the RIR should be at least 1! Got {lRIR}.")
     if vad is not None and (vad.ndim != 1 or vad.shape[0] != audio.shape[1]):
         raise ValueError("The VAD should be a 1D array of same size as audio")
 
@@ -107,32 +117,49 @@ def MWF_fd(
         vad = np.ones((audio.shape[1]), dtype=bool)
     vad = utils.vad.transformVAD(vad, STFTObj.mfft, 1 - STFTObj.hop / STFTObj.mfft)
 
-    # transform to frequency domain
+    # transform to frequency domain & shift to account for CTF approximation
     desFreq = STFTObj.stft(audio, axis=1).transpose(1, 0, 2)
     interferenceFreq = STFTObj.stft(noise, axis=1).transpose(1, 0, 2)
-    yFreq = desFreq + interferenceFreq
+
+    dShifted: list[np.ndarray] = [None for _ in range(lRIR)]  # pyright: ignore
+    nShifted: list[np.ndarray] = [None for _ in range(lRIR)]  # pyright: ignore
+
+    for i in range(lRIR):
+        shiftedD = np.roll(desFreq, shift=i, axis=2)
+        shiftedN = np.roll(interferenceFreq, shift=i, axis=2)
+        shiftedD[:, :, :i] = 0
+        shiftedN[:, :, :i] = 0
+        dShifted[i] = shiftedD
+        nShifted[i] = shiftedN
+
+    dExpanded = np.concatenate(dShifted, axis=1)
+    nExpanded = np.concatenate(nShifted, axis=1)
+    yExpanded = dExpanded + nExpanded
+
+    # expand e1 to account for the multiframe approach
+    e1Expanded = np.concatenate(
+        (e1, np.zeros(((lRIR - 1) * e1.shape[0], e1.shape[1]))), axis=0
+    )
 
     # keep the lFFT bins in front to solve jointly
-    Ryy = (yFreq[:, :, vad] @ np.conj(yFreq[:, :, vad].transpose(0, 2, 1))) / np.sum(
-        vad
-    )
+    Ryy = (
+        yExpanded[:, :, vad] @ np.conj(yExpanded[:, :, vad].transpose(0, 2, 1))
+    ) / np.sum(vad)
     if np.any(~vad):
         Rnn = (
-            yFreq[:, :, ~vad] @ np.conj(yFreq[:, :, ~vad].transpose(0, 2, 1))
+            yExpanded[:, :, ~vad] @ np.conj(yExpanded[:, :, ~vad].transpose(0, 2, 1))
         ) / np.sum(~vad)
     else:
-        Rnn = (
-            interferenceFreq @ np.conj(interferenceFreq.transpose(0, 2, 1))
-        ) / vad.shape[0]
+        Rnn = (nExpanded @ np.conj(nExpanded.transpose(0, 2, 1))) / vad.shape[0]
 
     if GEVD:
-        W_k = GEVD_MWF_computation(Ryy, Rnn, e1, Gamma, mu)
+        W_k = GEVD_MWF_computation(Ryy, Rnn, e1Expanded, Gamma, mu)
     else:
-        W_k = MWF_computation(Ryy, Rnn, e1, Gamma, mu)
+        W_k = MWF_computation(Ryy, Rnn, e1Expanded, Gamma, mu)
     W_k_H = np.conj(W_k.transpose(0, 2, 1))
 
-    desiredFiltered = W_k_H @ desFreq
-    interferenceFiltered = W_k_H @ interferenceFreq
+    desiredFiltered = W_k_H @ dExpanded
+    interferenceFiltered = W_k_H @ nExpanded
 
     desiredOut = np.real_if_close(STFTObj.istft(desiredFiltered, f_axis=0, t_axis=-1))
     interferenceOut = np.real_if_close(
@@ -158,6 +185,7 @@ def MWF_fd_online(
     Gamma: float = 0,
     mu: float = 1,
     vad: np.ndarray | None = None,
+    lRIR: int = 1,
 ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """
     Same function as "MWF_fd", but now computes the filter in an online mode
@@ -201,6 +229,9 @@ def MWF_fd_online(
         vad: np.ndarray, optional
             refer to `MWF_fd()`
 
+        lRIR: int, >= 1, optional
+            refer to `MWF_fd()`
+
     Returns
     -------
     The order is the same as `MWF_fd()`, but now returns a set of lists instead
@@ -229,9 +260,11 @@ def MWF_fd_online(
     if lmbd <= 0 or lmbd >= 1:
         raise ValueError("lmbd should be between 0 and 1")
     if updateMode not in ["exponential", "windowed"]:
-        raise ValueError(f"updateMode should be either exponential or windowed!")
+        raise ValueError("updateMode should be either exponential or windowed!")
     if vad is not None and (vad.ndim != 1 or vad.shape[0] != audio.shape[1]):
         raise ValueError("The VAD should be a 1D array of same size as audio")
+    if lRIR <= 0:
+        raise ValueError(f"lRIR should be >= 1! Got {lRIR}")
 
     if GEVD:  # bind the function for easier handling
         compute_MWF = GEVD_MWF_computation
@@ -247,9 +280,29 @@ def MWF_fd_online(
     desFreq = STFTObj.stft(audio, axis=1).transpose(1, 0, 2)
     interferenceFreq = STFTObj.stft(noise, axis=1).transpose(1, 0, 2)
 
+    # Shift data around to account for the CTF
+    dShifted: list[np.ndarray] = [None for _ in range(lRIR)]  # pyright: ignore
+    nShifted: list[np.ndarray] = [None for _ in range(lRIR)]  # pyright: ignore
+
+    for i in range(lRIR):
+        shiftedD = np.roll(desFreq, shift=i, axis=2)
+        shiftedN = np.roll(interferenceFreq, shift=i, axis=2)
+        shiftedD[:, :, :i] = 0
+        shiftedN[:, :, :i] = 0
+        dShifted[i] = shiftedD
+        nShifted[i] = shiftedN
+
+    dExpanded = np.concatenate(dShifted, axis=1)
+    nExpanded = np.concatenate(nShifted, axis=1)
+
+    # expand `e1` to account for longer scope
+    e1Expanded = np.concatenate(
+        (e1, np.zeros(((lRIR - 1) * e1.shape[0], e1.shape[1]))), axis=0
+    )
+
     # initialize the correlation matrices and weights
     Ryy = np.zeros(
-        (int(np.ceil(STFTObj.mfft / 2 + 1)), desFreq.shape[1], desFreq.shape[1]),
+        (dExpanded.shape[0], dExpanded.shape[1], dExpanded.shape[1]),
         dtype=np.complex128,
     )
     Rnn = np.zeros_like(Ryy)
@@ -257,23 +310,23 @@ def MWF_fd_online(
     Ryy[:, idx, idx] = 1e0
     Rnn[:, idx, idx] = 1e-1
 
-    W_mwf = compute_MWF(Ryy, Rnn, e1, Gamma, mu)
+    W_mwf = compute_MWF(Ryy, Rnn, e1Expanded, Gamma, mu)
 
     # preallocate memory
     nUpdates = int(np.ceil(desFreq.shape[2] / deltaUpdate))
-    audioSlices: list[np.ndarray] = [None for _ in range(nUpdates)]
-    noiseSlices: list[np.ndarray] = [None for _ in range(nUpdates)]
-    vadSlices: list[np.ndarray] = [None for _ in range(nUpdates)]
+    audioSlices: list[np.ndarray] = [None for _ in range(nUpdates)]  # pyright: ignore
+    noiseSlices: list[np.ndarray] = [None for _ in range(nUpdates)]  # pyright: ignore
+    vadSlices: list[np.ndarray] = [None for _ in range(nUpdates)]  # pyright: ignore
 
-    audioOut: list[np.ndarray] = [None for _ in range(nUpdates)]
-    noiseOut: list[np.ndarray] = [None for _ in range(nUpdates)]
-    Ws: list[np.ndarray] = [None for _ in range(nUpdates + 1)]
+    audioOut: list[np.ndarray] = [None for _ in range(nUpdates)]  # pyright: ignore
+    noiseOut: list[np.ndarray] = [None for _ in range(nUpdates)]  # pyright: ignore
+    Ws: list[np.ndarray] = [None for _ in range(nUpdates + 1)]  # pyright: ignore
     Ws[0] = W_mwf
 
     # segment data
     for i in range(nUpdates):
-        audioSlices[i] = desFreq[:, :, i * deltaUpdate : (i + 1) * deltaUpdate]
-        noiseSlices[i] = interferenceFreq[:, :, i * deltaUpdate : (i + 1) * deltaUpdate]
+        audioSlices[i] = dExpanded[:, :, i * deltaUpdate : (i + 1) * deltaUpdate]
+        noiseSlices[i] = nExpanded[:, :, i * deltaUpdate : (i + 1) * deltaUpdate]
         vadSlices[i] = vad[i * deltaUpdate : (i + 1) * deltaUpdate]
 
     # run over segments, compute statistics and update
@@ -310,7 +363,7 @@ def MWF_fd_online(
                     y[:, :, vadSlice] @ np.conj(y[:, :, vadSlice].transpose(0, 2, 1))
                 ) / (vadSlice.shape[0] - nActive)
 
-        Ws[i + 1] = compute_MWF(Ryy, Rnn, e1, Gamma, mu)
+        Ws[i + 1] = compute_MWF(Ryy, Rnn, e1Expanded, Gamma, mu)
 
     return Ws, audioOut, noiseOut
 
@@ -357,10 +410,10 @@ def GEVD_MWF_computation(
 
     Follows formula (9) - (17) in the GEVD-DANSE paper by A. Hassani, but uses
     a slightly different criterion as it incorporates an SDW-MWF computation for
-    which the criterion is $W = (Rss + mu * Rnn)^{-1} Rss e1$. For Rss a 
-    low-rank approximation is made with the GEVD, and $(Rss + mu * Rnn)^{-1}$ is 
-    replaced by $Ryy + (mu - 1) Rnn$. Concretely, $\Delta$ is computed, but 
-    $L$ isn't used. 
+    which the criterion is $W = (Rss + mu * Rnn)^{-1} Rss e1$. For Rss a
+    low-rank approximation is made with the GEVD, and $(Rss + mu * Rnn)^{-1}$ is
+    replaced by $Ryy + (mu - 1) Rnn$. Concretely, $\\Delta$ is computed, but
+    $L$ isn't used.
 
     /!\\ `Gamma` is just added as an argument, not used as of yet since GEVD-based
     DANSE appears to be stable enough for now, mostly here for the sake of ease

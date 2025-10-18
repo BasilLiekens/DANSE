@@ -9,15 +9,16 @@
 #
 # (c) Basil Liekens
 
+import sys
+import warnings
+
 import DANSE_base
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal as signal
 import signal_generation as siggen
-import sys
 import utils
-import warnings
 
 
 def main():
@@ -71,7 +72,15 @@ def main():
     ## start simulations
     ## local & centralized MWF
     W_MWF_fd, signal_fd, interference_fd = DANSE_base.MWF.MWF_fd(
-        fullAudio, fullNoise, e1, STFTObj, GEVD=False, Gamma=p.Gamma, mu=p.mu, vad=vad
+        fullAudio,
+        fullNoise,
+        e1,
+        STFTObj,
+        GEVD=False,
+        Gamma=p.Gamma,
+        mu=p.mu,
+        vad=vad,
+        lRIR=p.lRIR,
     )
     W_MWF_loc, _, _ = DANSE_base.MWF.MWF_fd(
         fullAudio[nodeToTrack * p.Mk : (nodeToTrack + 1) * p.Mk, :],
@@ -82,9 +91,18 @@ def main():
         Gamma=p.Gamma,
         mu=p.mu,
         vad=vad,
+        lRIR=p.lRIR,
     )
     W_MWF_gevd, signal_gevd, noise_gevd = DANSE_base.MWF.MWF_fd(
-        fullAudio, fullNoise, e1, STFTObj, GEVD=True, Gamma=p.Gamma, mu=p.mu, vad=vad
+        fullAudio,
+        fullNoise,
+        e1,
+        STFTObj,
+        GEVD=True,
+        Gamma=p.Gamma,
+        mu=p.mu,
+        vad=vad,
+        lRIR=p.lRIR,
     )
     W_MWF_gevd_loc, _, _ = DANSE_base.MWF.MWF_fd(
         fullAudio[nodeToTrack * p.Mk : (nodeToTrack + 1) * p.Mk, :],
@@ -95,6 +113,7 @@ def main():
         Gamma=p.Gamma,
         mu=p.mu,
         vad=vad,
+        lRIR=p.lRIR,
     )
 
     ## Online mode centralized MWF
@@ -110,6 +129,7 @@ def main():
         Gamma=p.Gamma,
         mu=p.mu,
         vad=vad,
+        lRIR=p.lRIR,
     )
     Ws_GEVD_online, _, _ = DANSE_base.MWF_fd_online(
         fullAudio,
@@ -123,6 +143,7 @@ def main():
         Gamma=p.Gamma,
         mu=p.mu,
         vad=vad,
+        lRIR=p.lRIR,
     )
 
     ## perform DANSE
@@ -203,7 +224,7 @@ def main():
     )
     for algo in sortedAlgos:
         nSpaces = len(sortedAlgos[-1]) - len(algo)  # list is sorted on length!
-        print(f"SINR after {algo[1:-1]}:{nSpaces*' '}\t{SINRafter_DANSE[algo]} dB")
+        print(f"SINR after {algo[1:-1]}:{nSpaces * ' '}\t{SINRafter_DANSE[algo]} dB")
 
     print(
         f"\nInitial STOI:\t\t\t{STOIinit}\nAfter Centralized MWF:\t\t{STOIafter_fd}"
@@ -211,7 +232,7 @@ def main():
     )
     for algo in sortedAlgos:
         nSpaces = len(sortedAlgos[-1]) - len(algo)  # list is sorted on length!
-        print(f"STOI after {algo[1:-1]}:{nSpaces*' '}\t{STOIafter_DANSE[algo]}")
+        print(f"STOI after {algo[1:-1]}:{nSpaces * ' '}\t{STOIafter_DANSE[algo]}")
 
     ## store the centralized and DANSE outputs
     utils.playback.writeSoundFile((fullAudio + fullNoise)[0, :], p.fs, "received")

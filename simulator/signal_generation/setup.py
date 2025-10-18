@@ -37,9 +37,7 @@ class Parameters:
     K: int = 10  # number of nodes
     Mk: int = 2  # number of microphones per node (all nodes have the same Mk)
     R: int = 1  # number of channels to communicate
-    node_diameter: float = (
-        0.2  # node diameter (m) (where the microphones are placed around the node's center) (all nodes have the same diameter)
-    )
+    node_diameter: float = 0.2  # node diameter (m) (where the microphones are placed around the node's center) (all nodes have the same diameter)
     min_inter_sensor_d: float = 0.05  # minimal inter-sensor distance within a node (m)
     #
     Ns: int = 1  # number of desired sources
@@ -53,6 +51,7 @@ class Parameters:
     lFFT: int = 1024  # number of points in the STFT
     window: str = "sqrt hanning"  # the default window to use in the STFT
     overlap: float = 0.5  # overlap between subsequent frames in the STFT
+    lRIR: int = 1  # the number of frames in convolutive transfer function approximation
     #
     alphaFormat: str = "harmonic"  # the alphas to use in the case of synchronous
     alpha0: int = 1  # the scaling of the alphas
@@ -65,9 +64,7 @@ class Parameters:
     #
     GEVD: bool = False  # whether or not to use the GEVD-based version of DANSE
     sequential: bool = True  # Use the sequential or synchronous version of DANSE
-    updateMode: str = (
-        "exponential"  # mode to update the correlation matrices (only applicable to online networks)
-    )
+    updateMode: str = "exponential"  # mode to update the correlation matrices (only applicable to online networks)
     Gamma: float = 0  # regularization constant for the computation of Wiener solution
     mu: float = 1  # mu constant for the speech-distortion weighting of the regular MWF
     #
